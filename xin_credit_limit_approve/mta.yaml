@@ -1,0 +1,108 @@
+_schema-version: "3.2"
+ID: xin_credit_limit_approve
+version: 0.0.1
+modules:
+- name: xin_credit_limit_approve-destination-content
+  type: com.sap.application.content
+  requires:
+  - name: xin_credit_limit_approve-destination-service
+    parameters:
+      content-target: true
+  - name: xin_credit_limit_approve_html_repo_host
+    parameters:
+      service-key:
+        name: xin_credit_limit_approve_html_repo_host-key
+  - name: uaa_xin_credit_limit_approve
+    parameters:
+      service-key:
+        name: uaa_xin_credit_limit_approve-key
+  parameters:
+    content:
+      subaccount:
+        destinations:
+        - Name: xin_credit_limit_approve_approuter_xin_credit_limit_approve_html_repo_host
+          ServiceInstanceName: xin_credit_limit_approve-html5-app-host-service
+          ServiceKeyName: xin_credit_limit_approve_html_repo_host-key
+          sap.cloud.service: xin_credit_limit_approve_approuter
+        - Authentication: OAuth2UserTokenExchange
+          Name: xin_credit_limit_approve_approuter_uaa_xin_credit_limit_approve
+          ServiceInstanceName: xin_credit_limit_approve-xsuaa-service
+          ServiceKeyName: uaa_xin_credit_limit_approve-key
+          sap.cloud.service: xin_credit_limit_approve_approuter
+        existing_destinations_policy: ignore
+  build-parameters:
+    no-source: true
+- name: workflow-module
+  type: com.sap.application.content
+  path: workflow-module
+  requires:
+  - name: sap_processautomation
+    parameters:
+      content-target: true
+      service-key:
+        config:
+          deployUsageScenario: workflow
+        name: spa-workflow-service-key
+- name: xin_credit_limit_approve-app-content
+  type: com.sap.application.content
+  path: .
+  requires:
+  - name: xin_credit_limit_approve_html_repo_host
+    parameters:
+      content-target: true
+  build-parameters:
+    build-result: resources
+    requires:
+    - artifacts:
+      - xinworkflowuimodule.zip
+      name: xinworkflowuimodule
+      target-path: resources/
+- name: xinworkflowuimodule
+  type: html5
+  path: workflow-ui-module
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+resources:
+- name: xin_credit_limit_approve-destination-service
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      HTML5Runtime_enabled: true
+      init_data:
+        subaccount:
+          destinations:
+          - Authentication: NoAuthentication
+            Name: ui5
+            ProxyType: Internet
+            Type: HTTP
+            URL: https://ui5.sap.com
+          existing_destinations_policy: update
+      version: 1.0.0
+    service: destination
+    service-name: xin_credit_limit_approve-destination-service
+    service-plan: lite
+- name: xin_credit_limit_approve_html_repo_host
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-name: xin_credit_limit_approve-html5-app-host-service
+    service-plan: app-host
+- name: uaa_xin_credit_limit_approve
+  type: org.cloudfoundry.managed-service
+  parameters:
+    path: ./xs-security.json
+    service: xsuaa
+    service-name: xin_credit_limit_approve-xsuaa-service
+    service-plan: application
+- name: sap_processautomation
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: workflow
+    service-plan: standard
+parameters:
+  deploy_mode: html5-repo
